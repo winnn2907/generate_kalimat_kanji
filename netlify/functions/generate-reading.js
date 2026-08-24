@@ -5,7 +5,7 @@
 // dikirim dari browser, TIDAK disimpan di server / environment variable).
 
 const GEMINI_ENDPOINT =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent";
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
