@@ -48,10 +48,15 @@ ${userTranslation}
 
 Nilai seberapa akurat terjemahan pelajar dibanding makna teks asli (bukan dibanding kata-per-kata kunci acuan — fokus pada ketepatan makna). Beri skor 0-100. Beri ulasan singkat (2-3 kalimat) yang membangun: apresiasi bagian yang sudah benar, lalu sebutkan bagian yang kurang tepat dan kenapa (jika ada).
 
+Selain itu, pecah TEKS JEPANG ASLI per kalimat (dipisah tanda 。), dan untuk SETIAP kalimat beri catatan singkat (1 kalimat pendek Bahasa Indonesia) apakah makna kalimat itu tercermin dengan benar di terjemahan pelajar secara keseluruhan atau tidak, dan jika tidak, apa yang terlewat/salah.
+
 Keluarkan HASIL dalam format JSON PERSIS seperti skema berikut, tanpa teks lain di luar JSON:
 {
   "score": <angka 0-100>,
-  "review": "ulasan singkat dalam Bahasa Indonesia"
+  "review": "ulasan singkat keseluruhan dalam Bahasa Indonesia",
+  "sentenceNotes": [
+    { "sentence": "kalimat Jepang asli (tanpa tag ruby, hiragana biasa untuk kanji)", "note": "catatan singkat akurasi kalimat ini" }
+  ]
 }`;
 
   try {
@@ -109,7 +114,11 @@ Keluarkan HASIL dalam format JSON PERSIS seperti skema berikut, tanpa teks lain 
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ score: parsed.score, review: parsed.review }),
+      body: JSON.stringify({
+        score: parsed.score,
+        review: parsed.review,
+        sentenceNotes: Array.isArray(parsed.sentenceNotes) ? parsed.sentenceNotes : [],
+      }),
     };
   } catch (err) {
     return {
