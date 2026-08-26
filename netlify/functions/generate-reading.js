@@ -27,31 +27,36 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: "Body request tidak valid." }) };
   }
 
-  const { words, mode, bookLabel, chapterLabel } = payload;
-  if (!Array.isArray(words) || words.length === 0) {
-    return { statusCode: 400, body: JSON.stringify({ error: "Daftar kata kosong." }) };
+  const { requiredWords, knownVocabulary, mode, bookLabel, chapterLabel } = payload;
+  if (!Array.isArray(requiredWords) || requiredWords.length === 0) {
+    return { statusCode: 400, body: JSON.stringify({ error: "Daftar kata wajib kosong." }) };
   }
+  const known = Array.isArray(knownVocabulary) ? knownVocabulary : [];
 
-  const isShort = mode === "opener_100" || mode === "fallback_100_no_previous_pool";
+  const isShort = mode === "short";
   const lengthInstruction = isShort
     ? "Buat HANYA 1-2 kalimat pendek dan natural."
     : "Buat 1-2 paragraf pendek yang natural dan mengalir (bukan sekadar kumpulan kalimat lepas).";
 
-  const wordList = words.map((w) => `${w.kata}(${w.yomi})`).join("、");
+  const requiredList = requiredWords.map((w) => `${w.kata}(${w.yomi})`).join("、");
+  const knownList = known.map((w) => `${w.kata}(${w.yomi})`).join("、");
 
   const prompt = `Kamu adalah penulis materi bacaan Bahasa Jepang level pemula (JLPT N5-N4), mengikuti gaya buku ajar "Irodori".
 
-DAFTAR KATA WAJIB DIPAKAI (kanji beserta cara baca aslinya, boleh dikonjugasikan sesuai konteks kalimat — bentuk masu/te/ta/kamus/nai dsb — asalkan kanjinya tetap kanji yang sama):
-${wordList}
-
+DAFTAR KATA WAJIB DIPAKAI SEMUA (kanji beserta cara baca aslinya; boleh dikonjugasikan sesuai konteks kalimat — bentuk masu/te/ta/kamus/nai dsb — asalkan kanjinya tetap kanji yang sama). SETIAP kata di daftar ini HARUS muncul minimal sekali di bacaan:
+${requiredList}
+${known.length > 0 ? `
+KOSAKATA YANG SUDAH DIPELAJARI SEBELUMNYA (opsional — pakai HANYA jika natural dibutuhkan untuk merangkai kalimat yang mengalir; TIDAK wajib semuanya muncul. TAPI, jika salah satu kata berikut atau bentuk konjugasinya memang kamu pakai dalam kalimat, WAJIB ditulis dengan kanji yang sesuai, JANGAN ditulis hiragana biasa, karena pelajar sudah pernah mempelajarinya):
+${knownList}
+` : ''}
 ATURAN PENTING:
 1. ${lengthInstruction}
-2. HANYA gunakan kanji dari daftar di atas. Kata-kata lain (partikel, kata bantu, kata ganti umum) boleh pakai hiragana/katakana biasa TANPA kanji tambahan di luar daftar.
-3. Konteksnya untuk pelajar level "${bookLabel} ${chapterLabel}" — jaga agar tata bahasa & kosakata di luar daftar tetap level pemula.
+2. Kanji HANYA boleh dari dua daftar di atas (wajib + sudah dipelajari). Kata lain (partikel, kata bantu, kata ganti umum di luar kedua daftar) pakai hiragana/katakana biasa TANPA kanji tambahan.
+3. Konteksnya untuk pelajar level "${bookLabel} ${chapterLabel}" — jaga agar tata bahasa & kosakata di luar kedua daftar tetap level pemula.
 4. Keluarkan HASIL dalam format JSON PERSIS seperti skema berikut, tanpa teks lain di luar JSON:
 
 {
-  "readingHtml": "kalimat Jepang dalam HTML, SETIAP kemunculan kanji dari daftar wajib dibungkus <ruby>KANJI<rt>BACAAN</rt></ruby> (hanya bagian kanji-nya, bukan okurigana/akhiran), sisanya teks biasa",
+  "readingHtml": "kalimat Jepang dalam HTML, SETIAP kemunculan kanji dari kedua daftar di atas dibungkus <ruby>KANJI<rt>BACAAN</rt></ruby> (hanya bagian kanji-nya, bukan okurigana/akhiran), sisanya teks biasa",
   "translationKey": "terjemahan Bahasa Indonesia yang natural dan akurat dari seluruh bacaan tersebut"
 }`;
 
