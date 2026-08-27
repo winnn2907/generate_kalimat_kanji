@@ -1,4 +1,4 @@
-const CACHE_NAME = 'yomikata-irodori-v3';
+const CACHE_NAME = 'yomikata-irodori-v4';
 const CORE_ASSETS = [
   './index.html',
   './manifest.json',
@@ -20,19 +20,14 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Panggilan ke backend: selalu network, tidak pernah di-cache (data harus segar)
-// Halaman utama & asset lain: STALE-WHILE-REVALIDATE — tampilkan versi tersimpan
-// dulu (instan, hemat bandwidth/kredit Netlify), sambil diam-diam ambil versi
-// terbaru di belakang layar untuk dipakai di kunjungan BERIKUTNYA.
-// Konsekuensi: setelah ada update baru, biasanya perlu buka app 2x untuk lihat
-// perubahannya (bukan buka 1x langsung update) — trade-off yang wajar untuk
-// menghemat bandwidth pada pemakaian sehari-hari yang jauh lebih sering
-// dibanding momen update.
+// Panggilan ke domain lain (Gemini API dsb): selalu network langsung, TIDAK PERNAH
+// di-cache oleh service worker ini — hanya asset app sendiri (index.html, dst) yang
+// pakai strategi stale-while-revalidate di bawah.
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  const isFunctionCall = url.pathname.startsWith('/.netlify/functions/') || url.pathname.startsWith('/api/');
+  const isCrossOrigin = url.origin !== self.location.origin;
 
-  if (isFunctionCall) {
+  if (isCrossOrigin) {
     event.respondWith(fetch(event.request));
     return;
   }
@@ -48,11 +43,9 @@ self.addEventListener('fetch', (event) => {
         .catch(() => null);
 
       if (cached) {
-        // Update cache di belakang layar, tapi langsung jawab pakai versi tersimpan
-        networkFetch;
+        networkFetch; // update cache di belakang layar untuk kunjungan berikutnya
         return cached;
       }
-      // Belum ada cache sama sekali (pertama kali buka) -> wajib tunggu network
       const fresh = await networkFetch;
       return fresh || new Response('Offline dan belum ada versi tersimpan.', { status: 503 });
     })
